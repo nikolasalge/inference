@@ -1,5 +1,7 @@
 """
 dataset related classes and methods
+
+NA: Changes made by Nikolas Alge are tagged with "NA:" 
 """
 
 # pylint: disable=unused-argument,missing-docstring
@@ -196,6 +198,73 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     img -= 0.5
     img *= 2
 
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img
+
+
+#NA: add quantized preprocessing for coral
+def pre_process_mobilenet_quant(img, dims=None, need_transpose=False):
+    """Preprocesses Image for a quantized Mobilenet
+    
+    :param img: image that is loaded with cv2
+    :type img: Mat, return of cv.imread()
+    
+    :param dims: format you want the img to be converted to in HWC, 
+        defaults to None
+    :type dims: list, e.g. [224, 224, 3], optional
+    
+    :param need_transpose: specifies, if the image needs to be transposed,
+        defaults to False
+    :type need_transpose: bool, optional
+    
+    :return: processed image
+    :rtype: ndarray
+    """
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    output_height, output_width, _ = dims #[244, 244, 3]
+    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
+    img = center_crop(img, output_height, output_width)
+    img = np.asarray(img, dtype='uint8')
+
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img
+
+#NA: add float16 preprocessing for ncs2
+def pre_process_mobilenet_fp16(img, dims=None, need_transpose=False):
+    """Preprocessing of Image for a FP16 Mobilenet
+    
+    :param img: image that is loaded with cv2
+    :type img: Mat, return of cv.imread()
+    
+    :param dims: format you want the img to be converted to in HWC, 
+        defaults to None
+    :type dims: list, e.g. [224, 224, 3], optional
+    
+    :param need_transpose: specifies, if the image needs to be transposed,
+        defaults to False
+    :type need_transpose: bool, optional
+    
+    :return: processed image
+    :rtype: ndarray
+    """
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    output_height, output_width, _ = dims
+    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
+    img = center_crop(img, output_height, output_width)
+    #return img as ndarray
+    img = np.asarray(img, dtype='float16')
+        
+    # convert form [0,255] to [-1,1]
+    img /= 255.0
+    img -= 0.5
+    img *= 2
+    
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])

@@ -1,5 +1,7 @@
 """
 mlperf inference benchmarking tool
+
+NA: Changes made by Nikolas Alge are tagged with "NA:" 
 """
 
 from __future__ import division
@@ -8,10 +10,10 @@ from __future__ import unicode_literals
 
 import argparse
 import array
-import collections
 import json
 import logging
 import os
+#import subprocess
 import sys
 import threading
 import time
@@ -40,6 +42,16 @@ SUPPORTED_DATASETS = {
     "imagenet_mobilenet":
         (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
+    #NA:
+    #ncs2: fp16
+    "imagenet_mobilenet_fp16":
+        (imagenet.Imagenet, dataset.pre_process_mobilenet_fp16, dataset.PostProcessArgMax(offset=-1),
+         {"image_size": [224, 224, 3]}),
+    #NA:
+    #coral: int8
+    "imagenet_mobilenet_quant":
+        (imagenet.Imagenet, dataset.pre_process_mobilenet_quant, dataset.PostProcessArgMax(offset=-1),
+         {"image_size": [224, 224, 3]}),
     "imagenet_pytorch":
         (imagenet.Imagenet, dataset.pre_process_imagenet_pytorch, dataset.PostProcessArgMax(offset=0),
          {"image_size": [224, 224, 3]}),
@@ -63,17 +75,17 @@ SUPPORTED_DATASETS = {
          {"image_size": [1200, 1200, 3],"use_label_map": False}),
 }
 
-# pre-defined command line options so simplify things. They are used as defaults and can be
+# pre-defined command line options to simplify things. They are used as defaults and can be
 # overwritten from command line
 
-SUPPORTED_PROFILES = {
+SUPPORTED_PROFILES = {  
     "defaults": {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
         "max-batchsize": 32,
-    },
-
+    },    
+                
     # resnet
     "resnet50-tf": {
         "inputs": "input_tensor:0",
@@ -103,6 +115,33 @@ SUPPORTED_PROFILES = {
         "backend": "onnxruntime",
         "model-name": "mobilenet",
     },
+            
+    #NA: coral    
+    "mobilenet_coral": {
+        "dataset": "imagenet_mobilenet_quant",
+        "model-name": "mobilenet",
+        "backend": "tflite_coral",
+        "max-batchsize": 1,
+        "inputs": "input:0",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        "scenario": "MultiStream",
+        #"accuracy": 1,
+        #override mlperf rules compliant settings
+        #"time": 10 ,
+        #"count": 1000 , 
+    },  
+    #NA: ncs2    
+    "mobilenet_ncs2": {
+        "dataset": "imagenet_mobilenet_fp16", 
+        "model-name": "mobilenet",
+        "backend": "openvino_ncs2",
+        "max-batchsize": 1, #set this during model optimization to IR
+        "scenario": "MultiStream",
+        #"accuracy": 1,
+        #override mlperf rules compliant settings
+        #"time": 10 ,
+        #"count": 1000 , 
+    },  
 
     # ssd-mobilenet
     "ssd-mobilenet-tf": {
@@ -180,7 +219,7 @@ def get_args():
     parser.add_argument("--dataset-list", help="path to the dataset list")
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
-    parser.add_argument("--scenario", default="SingleStream",
+    parser.add_argument("--scenario",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
@@ -212,11 +251,14 @@ def get_args():
     # and take this as default unless command line give
     defaults = SUPPORTED_PROFILES["defaults"]
 
+    # override defaults with profile args
     if args.profile:
         profile = SUPPORTED_PROFILES[args.profile]
         defaults.update(profile)
+    # takes default argument and value pairs
     for k, v in defaults.items():
         kc = k.replace("-", "_")
+        # if the argument is not set, then use default value
         if getattr(args, kc) is None:
             setattr(args, kc, v)
     if args.inputs:
@@ -248,6 +290,14 @@ def get_backend(backend):
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
+    #NA: new backend for coral
+    elif backend == "tflite_coral":
+        from backend_tflite_coral import BackendTfliteCoral
+        backend = BackendTfliteCoral()
+    #NA: new backend for ncs2
+    elif backend == "openvino_ncs2":
+        from backend_openvino_ncs2 import BackendOpenVinoNCS2
+        backend = BackendOpenVinoNCS2()
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
@@ -411,10 +461,10 @@ def main():
     log.info(args)
 
     # find backend
-    backend = get_backend(args.backend)
+    backend = get_backend(args.backend) #NA: tflite, openvino
 
     # override image format if given
-    image_format = args.data_format if args.data_format else backend.image_format()
+    image_format = args.data_format if args.data_format else backend.image_format() #na: nhwc
 
     # --count applies to accuracy mode only and can be used to limit the number of images
     # for testing. For perf model we always limit count to 200.
@@ -528,10 +578,24 @@ def main():
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 
+    #NA:
+#    # coutdown before the start of the benchmark for measurement
+#    countdown_from = 2
+#    for i in range(countdown_from):
+#        print("Start in " + str(countdown_from - i) + " second(s)!")
+#        time.sleep(1)
+#        
+#    # start measurement
+#    script_path = ("/home/ubuntuu/Bachelorarbeit/2_local_code/"
+#                   "changed_from_power_measurements/"
+#                   "gather_and_save_multi_channel_modified.py")
+#    p = subprocess.Popen(['python', script_path])
+        
+    # start benchmark
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
     runner.start_run(result_dict, args.accuracy)
-
+    
     lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
 
     if not last_timeing:
@@ -541,7 +605,12 @@ def main():
 
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
-
+    
+    #NA:
+    # terminate the subprocess
+    #time.sleep(10)
+    #p.terminate()
+    
     runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
