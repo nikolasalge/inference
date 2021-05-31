@@ -8,7 +8,7 @@ What you need
 * get model:
     * mobilnetv1
     * .xml and .bin for ncs2
-    * .tflite and compiled for edgetpu for coral
+    * .tflite (compiled for edgetpu) for coral
 * get dataset:
     * imagenet validation
     * val_map.txt
@@ -34,3 +34,20 @@ run :code:`vision/classification_and_detection/python/main.py` with the followin
     --profile mobilenet_coral \
     --accuracy --count 100
 
+Important Files
+---------------
+
+::
+
+   inference in develop/nikolas branch
+   └── vision/classification_and_detection/python
+      ├── main.py
+      ├── backend_openvino_ncs2.py
+      ├── backend_tflite_coral.py
+      └── dataset.py
+        
+* **main.py**: run the benchmarkt with this file like the example shown above
+* **backend_openvino_ncs2.py**: new backend for NCS2 compatibility
+* **backend_tflite_coral.py**: new backend for Coral compatibility
+* **dataset.py**: added preprocessing methods for int8 and float16
+    
