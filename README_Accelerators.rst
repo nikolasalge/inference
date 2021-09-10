@@ -1,5 +1,5 @@
-MLPerf on Coral and NCS2
-========================
+MLPerf on Goolge Coral and Intel NCS2
+=====================================
 
 Prerequisites Coral
 -------------------
