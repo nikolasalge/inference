@@ -3,12 +3,14 @@ MLPerf on Goolge Coral and Intel NCS2
 
 Prerequisites Coral
 -------------------
-* install Edge TPU runtime: `Coral Doc`__
+* Install Edge TPU runtime: `Coral Doc`__
 
 Note: Frequency mode is chosen by installing the respective runtime, to change the mode simply install the other runtime (you can't have both installed at the same time).
 
-* Models for Coral can either be downloaded from `Coral.ai`__ or compiled with the `Edge TPU compiler`__
-* To use Tensorflow models, they first have to be converted to 8-bit Tensorflow lite models: `Tensorflow models on the Edge TPU`__
+* Models for Coral can either be downloaded from `coral.ai`__ or you can use your own
+* To use Tensorflow models, they first have to be converted to 8-bit tflite models and then 
+have to be compiled with the `Edge TPU Compiler`__
+* Details on the model conversion process: `Tensorflow models on the Edge TPU`__
 
 __ https://coral.ai/docs/accelerator/get-started
 __ https://coral.ai/models/
@@ -18,25 +20,26 @@ __ https://coral.ai/docs/edgetpu/models-intro/
 Prerequisites NCS 2
 -------------------
 * Openvino
+* Prepare model with Model Optimizer
 
 Prepare MLPerf
 --------------
-* repository: `MLPerf Inference`__
-* clone the repository with with recurse submodules argument
+* Repository: `MLPerf Inference`__
+* Clone the repository with with recurse submodules argument
 * :code:`git clone --recurse-submodules https://github.com/nikolasalge/inference/tree/develop/nikolas`
-* install loadgen: `README_BUILD`__
+* Install loadgen: `README_BUILD`__
 
 __ https://github.com/nikolasalge/inference/tree/develop/nikolas
 __ https://github.com/nikolasalge/inference/blob/develop/nikolas/loadgen/README_BUILD.md#git-submodules-approach
 
 Model and Dataset
----------------------
-* model:
-    * mobilnetv1
-    * .xml and .bin for ncs2
-    * .tflite (compiled for edgetpu) for coral
-* dataset:
-    * imagenet validation: you have to login on `image-net.org`__ and download ILSVRC2012 Validation Images (6.3GB)
+-----------------
+* Model:
+    * Mobilnetv1
+    * .xml and .bin for NCS2
+    * .tflite (compiled for edgetpu) for Coral
+* Dataset:
+    * Imagenet validation: you have to register on `image-net.org`__ and download ILSVRC2012 Validation Images (6.3GB)
     * val_map.txt: get the val_map via `CK`__
 
 __ https://image-net.org/challenges/LSVRC/2012/2012-downloads.php
@@ -44,14 +47,14 @@ __ https://github.com/mlcommons/inference/tree/master/vision/classification_and_
 
 How to run MLPerf
 -----------------
-change to :code:`vision/classification_and_detection`, then run :code:`python/main.py` with the following arguments:
+Change to :code:`vision/classification_and_detection`, then run :code:`python/main.py` with the following arguments:
 
 * :code:`--model [path to model file]`
 * :code:`--dataset-path [path to dataset folder containing images and val_map]`
 * :code:`--profile [mobilenet_coral, mobilenet_ncs2]`
 * :code:`--accuracy` use loadgen accuracy mode instead of performance mode
 * :code:`--count [number of images to use]` not mlperf compliant for accuracy mode, use for performance mode or for testing
-* :code:`--samples-per-query [No. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default)
+* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default)
 * `further arguments`__
 
 __ https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection#usage
