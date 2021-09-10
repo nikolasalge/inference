@@ -8,8 +8,7 @@ Prerequisites Coral
 Note: Frequency mode is chosen by installing the respective runtime, to change the mode simply install the other runtime (you can't have both installed at the same time).
 
 * Models for Coral can either be downloaded from `coral.ai`__ or you can use your own
-* To use Tensorflow models, they first have to be converted to 8-bit tflite models and then 
-have to be compiled with the `Edge TPU Compiler`__
+* To use Tensorflow models, they first have to be converted to 8-bit tflite models and then have to be compiled with the `Edge TPU Compiler`__
 * Details on the model conversion process: `Tensorflow models on the Edge TPU`__
 
 __ https://coral.ai/docs/accelerator/get-started
