@@ -13,11 +13,12 @@ import array
 import json
 import logging
 import os
-#import subprocess
+import subprocess
 import sys
 import threading
 import time
 from queue import Queue
+import signal
 
 import mlperf_loadgen as lg
 import numpy as np
@@ -78,12 +79,13 @@ SUPPORTED_DATASETS = {
 # pre-defined command line options to simplify things. They are used as defaults and can be
 # overwritten from command line
 
+#NA: changed max-batchsize to max_batchsize
 SUPPORTED_PROFILES = {  
     "defaults": {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "max-batchsize": 32,
+        "max_batchsize": 32,
     },    
                 
     # resnet
@@ -121,7 +123,7 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet_mobilenet_quant",
         "model-name": "mobilenet",
         "backend": "tflite_coral",
-        "max-batchsize": 1,
+        "max_batchsize": 1, #2048
         "inputs": "input:0",
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "scenario": "MultiStream",
@@ -135,7 +137,9 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet_mobilenet_fp16", 
         "model-name": "mobilenet",
         "backend": "openvino_ncs2",
-        "max-batchsize": 1, #set this during model optimization to IR
+        #set this during model optimization to IR, well actually 
+        #samples_per_query, this is just max value
+        "max_batchsize": 128, 
         "scenario": "MultiStream",
         #"accuracy": 1,
         #override mlperf rules compliant settings
@@ -188,7 +192,7 @@ SUPPORTED_PROFILES = {
         "outputs": "bboxes,labels,scores",
         "backend": "onnxruntime",
         "data-format": "NCHW",
-        "max-batchsize": 1,
+        "max_batchsize": 1,
         "model-name": "ssd-resnet34",
     },
     "ssd-resnet34-onnxruntime-tf": {
@@ -211,7 +215,7 @@ SCENARIO_MAP = {
 last_timeing = []
 
 
-def get_args():
+def get_args(args):
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
@@ -221,7 +225,7 @@ def get_args():
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
-    parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
+    parser.add_argument("--max_batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -234,7 +238,12 @@ def get_args():
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
-
+    
+    # NA: add data measurement option
+    parser.add_argument('--measure', dest='measure', action='store_true')
+    parser.add_argument('--no-measure', dest='measure', action='store_false')
+    parser.set_defaults(measure=False)
+        
     # file to use mlperf rules compliant parameters
     parser.add_argument("--mlperf_conf", default="../../mlperf.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
@@ -245,7 +254,7 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
     parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
     # and take this as default unless command line give
@@ -321,7 +330,6 @@ class RunnerBase:
         self.model = model
         self.post_process = post_proc
         self.threads = threads
-        self.take_accuracy = False
         self.max_batchsize = max_batchsize
         self.result_timing = []
 
@@ -429,7 +437,7 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
 
     # this is what we record for each run
     result = {
-        "took": took,
+        "took": took, #time it took´
         "mean": np.mean(result_list),
         "percentiles": {str(k): v for k, v in zip(percentiles, buckets)},
         "qps": len(result_list) / took,
@@ -452,11 +460,25 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
     print("{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
         name, result["qps"], result["mean"], took, acc_str,
         len(result_list), buckets_str))
+    
+# NA: new function
+def start_measurement(output_dir, count, profile):
+    script_path = ("/home/ubuntuu/Bachelorarbeit/2_local_code/"
+               "changed_from_power_measurements/"
+               "gather_and_save_single_channel_modified.py")
+    hw = profile.split("_")[1]
+    factor = {
+        "coral" : 0.0073,
+        "ncs2" : 0.03 #0.0195
+            }
+    seconds = int(max(1, count*factor[hw]))
+    samples = 100000 * seconds
+    return subprocess.Popen(['python', script_path, '-s', str(samples), '-o', output_dir])
 
-
-def main():
+#def main():
+def main(args):
     global last_timeing
-    args = get_args()
+    args = get_args(args)
 
     log.info(args)
 
@@ -467,7 +489,7 @@ def main():
     image_format = args.data_format if args.data_format else backend.image_format() #na: nhwc
 
     # --count applies to accuracy mode only and can be used to limit the number of images
-    # for testing. For perf model we always limit count to 200.
+    # for testing. For perf model we always limit count to 200. NA: (500??)
     count_override = False
     count = args.count
     if count:
@@ -504,7 +526,7 @@ def main():
     if args.output:
         output_dir = os.path.abspath(args.output)
         os.makedirs(output_dir, exist_ok=True)
-        os.chdir(output_dir)
+        #os.chdir(output_dir)
 
     #
     # make one pass over the dataset to validate accuracy
@@ -579,18 +601,17 @@ def main():
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 
     #NA:
-#    # coutdown before the start of the benchmark for measurement
-#    countdown_from = 2
-#    for i in range(countdown_from):
-#        print("Start in " + str(countdown_from - i) + " second(s)!")
-#        time.sleep(1)
-#        
-#    # start measurement
-#    script_path = ("/home/ubuntuu/Bachelorarbeit/2_local_code/"
-#                   "changed_from_power_measurements/"
-#                   "gather_and_save_multi_channel_modified.py")
-#    p = subprocess.Popen(['python', script_path])
-        
+    # coutdown before the start of the benchmark for measurement
+    countdown_from = 3
+    for i in range(countdown_from):
+        print("Start in " + str(countdown_from - i) + " second(s)!")
+        time.sleep(1)
+     
+    # NA: start measurement
+    if args.measure:
+        p = start_measurement(output_dir, count, args.profile)
+        time.sleep(2)
+                
     # start benchmark
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
@@ -607,9 +628,13 @@ def main():
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
     
     #NA:
-    # terminate the subprocess
-    #time.sleep(10)
-    #p.terminate()
+    if args.measure:
+        os.kill(p.pid, signal.SIGINT)
+        time.sleep(2) # while file locked wait
+        p.terminate()
+        time.sleep(2)
+        # count flops of model and add it to results
+        #final_results[name] = flops
     
     runner.finish()
     lg.DestroyQSL(qsl)
@@ -619,9 +644,11 @@ def main():
     # write final results
     #
     if args.output:
-        with open("results.json", "w") as f:
+        out_file = os.path.join(output_dir, "results.json")
+        with open(out_file, "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
+    #main()

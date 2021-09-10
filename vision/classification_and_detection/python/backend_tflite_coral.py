@@ -15,6 +15,7 @@ from threading import Lock
 
 import tflite_runtime
 import tflite_runtime.interpreter as tflite
+#from tensorflow.lite.python import interpreter as tflite
 
 import backend
 
