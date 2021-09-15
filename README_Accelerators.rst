@@ -54,8 +54,7 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
 * :code:`--dataset-path [path to dataset folder containing images and val_map]`
 * :code:`--accuracy` use loadgen accuracy mode instead of performance mode
 * :code:`--count [number of images to use]` not mlperf compliant for accuracy mode, use for performance mode or for testing
-* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default)
-    refers to N in NHWC, the number of samples which the model was compiled with
+* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default), refers to N in NHWC, the number of samples which the model was compiled with
 * `further arguments`__
 
 __https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
