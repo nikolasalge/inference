@@ -57,7 +57,7 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
 * :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default), refers to N in NHWC, the number of samples which the model was compiled with
 * `further arguments`__
 
-__https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
+__ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
 
 **example:**
 
