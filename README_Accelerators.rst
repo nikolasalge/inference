@@ -34,12 +34,13 @@ __ https://github.com/nikolasalge/inference/blob/develop/nikolas/loadgen/README_
 Model and Dataset
 -----------------
 * Model:
-    * Mobilnetv1
+    * Mobilnetv1 (others may work too)
     * .xml and .bin for NCS2
     * .tflite (compiled for edgetpu) for Coral
+    * The number of samples N (NWHC) you compile the model with has to be the same as the "--samples-per-query" parameter given to MLPerf (see parameter description below)
 * Dataset:
     * Imagenet validation: you have to register on `image-net.org`__ and download ILSVRC2012 Validation Images (6.3GB)
-    * val_map.txt: get the val_map via `CK`__
+    * You need the val_map: get val_map.txt via `CK`__
 
 __ https://image-net.org/challenges/LSVRC/2012/2012-downloads.php
 __ https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection#using-collective-knowledge-ck
@@ -53,7 +54,8 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
 * :code:`--profile [mobilenet_coral, mobilenet_ncs2]`
 * :code:`--accuracy` use loadgen accuracy mode instead of performance mode
 * :code:`--count [number of images to use]` not mlperf compliant for accuracy mode, use for performance mode or for testing
-* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default)
+* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default); 
+    refers to N in NHWC, the number of samples which the model was compiled with
 * `further arguments`__
 
 __ https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection#usage
