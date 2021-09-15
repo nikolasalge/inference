@@ -79,13 +79,12 @@ SUPPORTED_DATASETS = {
 # pre-defined command line options to simplify things. They are used as defaults and can be
 # overwritten from command line
 
-#NA: changed max-batchsize to max_batchsize
 SUPPORTED_PROFILES = {  
     "defaults": {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "max_batchsize": 32,
+        "max-batchsize": 32,
     },    
                 
     # resnet
@@ -123,7 +122,7 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet_mobilenet_quant",
         "model-name": "mobilenet",
         "backend": "tflite_coral",
-        "max_batchsize": 1, #2048
+        "max-batchsize": 2048,
         "inputs": "input:0",
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "scenario": "MultiStream",
@@ -139,7 +138,7 @@ SUPPORTED_PROFILES = {
         "backend": "openvino_ncs2",
         #set this during model optimization to IR, well actually 
         #samples_per_query, this is just max value
-        "max_batchsize": 128, 
+        "max-batchsize": 128, 
         "scenario": "MultiStream",
         #"accuracy": 1,
         #override mlperf rules compliant settings
@@ -192,7 +191,7 @@ SUPPORTED_PROFILES = {
         "outputs": "bboxes,labels,scores",
         "backend": "onnxruntime",
         "data-format": "NCHW",
-        "max_batchsize": 1,
+        "max-batchsize": 1,
         "model-name": "ssd-resnet34",
     },
     "ssd-resnet34-onnxruntime-tf": {
@@ -225,7 +224,7 @@ def get_args(args):
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
-    parser.add_argument("--max_batchsize", type=int, help="max batch size in a single inference")
+    parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -266,10 +265,14 @@ def get_args(args):
         defaults.update(profile)
     # takes default argument and value pairs
     for k, v in defaults.items():
+        #NA: the arguments in the parser are all called with "_" instead of "-", 
+        #i guess the parser just works like that ("-" is not allowed in python variables)
+        #Therefore the profile dict keys are changed so they fit the parser args.
         kc = k.replace("-", "_")
         # if the argument is not set, then use default value
         if getattr(args, kc) is None:
             setattr(args, kc, v)
+
     if args.inputs:
         args.inputs = args.inputs.split(",")
     if args.outputs:
@@ -600,13 +603,6 @@ def main(args):
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 
-    #NA:
-    # coutdown before the start of the benchmark for measurement
-    countdown_from = 3
-    for i in range(countdown_from):
-        print("Start in " + str(countdown_from - i) + " second(s)!")
-        time.sleep(1)
-     
     # NA: start measurement
     if args.measure:
         p = start_measurement(output_dir, count, args.profile)
