@@ -86,7 +86,7 @@ Changes made to ensure compatibility of Accelerators
       ├── backend_tflite_coral.py
       └── dataset.py
 
-* **main.py**: run the benchmarkt with this file like the example shown above
+* **main.py**: run the benchmark with this file like the example shown above
 * **backend_openvino_ncs2.py**: new backend for NCS2 compatibility
 * **backend_tflite_coral.py**: new backend for Coral compatibility
 * **dataset.py**: added preprocessing methods for int8 (coral) and float16 (ncs2)
