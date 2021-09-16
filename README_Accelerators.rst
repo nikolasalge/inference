@@ -1,18 +1,37 @@
 MLPerf on Goolge Coral and Intel NCS2
 =====================================
 
+Model and Dataset
+-----------------
+* Model:
+    * MobilnetV1
+    * The model has to be compiled for the specific accelerator (for more details see Prerequisisites below)
+    * Model format for Coral: .tflite (compiled for edgetpu)
+    * Model format for NCS2: .xml and .bin
+    * The number of samples N (as in NHWC) you compile the model with has to be the same as the :code:`--samples-per-query` parameter given to MLPerf (see parameter description below)
+    * Get model from `here`__, e.g. `MobilenetV1 quantized`__
+* Dataset:
+    * Imagenet validation: you have to register on `image-net.org`__ and download ILSVRC2012 Validation Images (6.3GB)
+    * You need the val_map: get val_map.txt via `CK`__
+
+__ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#supported-models
+__ https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz
+__ https://image-net.org/challenges/LSVRC/2012/2012-downloads.php
+__ https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection#using-collective-knowledge-ck
+
 Prerequisites Coral
 -------------------
 * Install Edge TPU runtime: `Coral Doc`__
 
 Note: Frequency mode is chosen by installing the respective runtime, to change the mode simply install the other runtime (you can't have both installed at the same time).
 
-* Models for Coral can either be downloaded from `coral.ai`__ or you can use your own
+* Instead of compiling models yourself, Coral-ready models can be downloaded from `coral.ai`__, e.g. `MobileNetV1 compiled for Edge TPU`__
 * To use Tensorflow models, they first have to be converted to 8-bit tflite models and then have to be compiled with the `Edge TPU Compiler`__
 * Details on the model conversion process: `Tensorflow models on the Edge TPU`__
 
 __ https://coral.ai/docs/accelerator/get-started
-__ https://coral.ai/models/
+__ https://coral.ai/models/image-classification/
+__ https://github.com/google-coral/test_data/raw/master/mobilenet_v1_1.0_224_quant_edgetpu.tflite
 __ https://coral.ai/docs/edgetpu/compiler/
 __ https://coral.ai/docs/edgetpu/models-intro/
 
@@ -30,20 +49,6 @@ Prepare MLPerf
 
 __ https://github.com/nikolasalge/inference/tree/develop/nikolas
 __ https://github.com/nikolasalge/inference/blob/develop/nikolas/loadgen/README_BUILD.md#git-submodules-approach
-
-Model and Dataset
------------------
-* Model:
-    * Mobilnetv1 (others may work too)
-    * .xml and .bin for NCS2
-    * .tflite (compiled for edgetpu) for Coral
-    * The number of samples N (as in NHWC) you compile the model with has to be the same as the :code:`--samples-per-query` parameter given to MLPerf (see parameter description below)
-* Dataset:
-    * Imagenet validation: you have to register on `image-net.org`__ and download ILSVRC2012 Validation Images (6.3GB)
-    * You need the val_map: get val_map.txt via `CK`__
-
-__ https://image-net.org/challenges/LSVRC/2012/2012-downloads.php
-__ https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection#using-collective-knowledge-ck
 
 How to run MLPerf
 -----------------
