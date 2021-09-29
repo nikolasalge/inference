@@ -8,7 +8,6 @@ Model and Dataset
     * The model has to be compiled for the specific accelerator (for more details see Prerequisisites below)
     * Model format for Coral: .tflite (compiled for edgetpu)
     * Model format for NCS2: .xml and .bin
-    * The number of samples N (as in NHWC) you compile the model with has to be the same as the :code:`--samples-per-query` parameter given to MLPerf (see parameter description below)
     * Get model from `here`__, e.g. `MobilenetV1 quantized`__
 * Dataset:
     * Imagenet validation: you have to register on `image-net.org`__ and download ILSVRC2012 Validation Images (6.3GB)
@@ -59,7 +58,8 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
 * :code:`--dataset-path [path to dataset folder containing images and val_map]`
 * :code:`--accuracy` use loadgen accuracy mode instead of performance mode
 * :code:`--count [number of images to use]` not mlperf compliant for accuracy mode, use for performance mode or for testing
-* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default), refers to N in NHWC, the number of samples which the model was compiled with
+* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default)
+* :code:`--max-batchsize [N]` Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the model optimizer when compiling the model)
 * `further arguments`__
 
 __ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
