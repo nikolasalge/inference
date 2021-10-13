@@ -54,15 +54,20 @@ How to run MLPerf
 Change to :code:`vision/classification_and_detection`, then run :code:`python/main.py` with the following arguments:
 
 * :code:`--profile [mobilenet_coral, mobilenet_ncs2]`
+    sets default settings
 * :code:`--model [path to model file]`
 * :code:`--dataset-path [path to dataset folder containing images and val_map]`
-* :code:`--accuracy` use loadgen accuracy mode instead of performance mode
-* :code:`--count [number of images to use]` not mlperf compliant for accuracy mode, use for performance mode or for testing
-* :code:`--samples-per-query [no. of samples]` mlperf multi-stream sample per query (the coral and ncs2 profiles use multistream mode by default)
-* :code:`--max-batchsize [N]` Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the model optimizer when compiling the model)
+* :code:`--accuracy` 
+    use loadgen accuracy mode instead of performance mode
+* :code:`--count [number of images to use]` 
+    not mlperf compliant for accuracy mode, use for performance mode or for testing
+* :code:`--scenario [SingleStream, MultiStream, Server, Offline]`
+    sets loadgen scenario, for more info see below (the coral and ncs2 profiles use multistream mode by default)
+* :code:`--samples-per-query [no. of samples]`
+    only used in MultiStream Mode, sets number of samples that are sent each query 
+* :code:`--max-batchsize [N]` 
+    Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the model optimizer when compiling the model)
 * `further arguments`__
-
-__ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
 
 **example:**
 
@@ -73,6 +78,21 @@ __ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classifi
     --dataset-path ~/dataset/ILSVRC2012_img_val \
     --profile mobilenet_coral \
     --accuracy --count 100 --samples-per-query 4
+
+__ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
+
+More information on LoadGen Scenarios
+-------------------------------------
+There are 4 Scenarios:
+
+* **SingleStream**: Queries with 1 Image each are sent sequentially
+* **MultiStream**: Each Query has N samples (see :code:`--samples-per-query` parameter); Queries are sent every 50ms (for Object Detection)
+* **Server**: Query arrival is random
+* **Offline**: A single Query with all Samples is sent
+
+for more information see Chapter III - Section C in `MLPerf Inference Benchmark`__
+
+__ https://arxiv.org/pdf/1911.02549.pdf
 
 Changes made to ensure compatibility of Accelerators
 ----------------------------------------------------
