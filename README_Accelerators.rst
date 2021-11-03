@@ -63,7 +63,7 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
 
 * LoadGen Arguments    
     * :code:`--scenario [SingleStream, MultiStream, Server, Offline]`
-        Sets loadgen scenario, for more info see below (the Coral and NCS2 profiles use MultitSream mode by default).
+        Sets LoadGen scenario, for more info see below (the Coral and NCS2 profiles use MultitStream mode by default).
     * :code:`--samples-per-query [no. of samples]`
         Only used in MultiStream Mode. Sets number of samples that are sent each query. Set to model-batchsize (max-batchsize*n, where n is a positive integer, works too).
     * :code:`--accuracy` 
