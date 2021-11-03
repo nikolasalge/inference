@@ -57,19 +57,19 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
     * :code:`--model [path to model file]`
     * :code:`--dataset-path [path to dataset folder containing images and val_map.txt]`
     * :code:`--profile [mobilenet_coral, mobilenet_ncs2]`
-        sets default settings
+        Sets default settings.
     * :code:`--max-batchsize [N]` 
-        set this parameter to the batch size of the model. Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the Model Optimizer when compiling the model)
+        Set this parameter to the batch size of the model. Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the Model Optimizer when compiling the model).
 
 * LoadGen Arguments    
     * :code:`--scenario [SingleStream, MultiStream, Server, Offline]`
-        sets loadgen scenario, for more info see below (the Coral and NCS2 profiles use MultitSream mode by default)
+        Sets loadgen scenario, for more info see below (the Coral and NCS2 profiles use MultitSream mode by default).
     * :code:`--samples-per-query [no. of samples]`
-        only used in MultiStream Mode, sets number of samples that are sent each query, set to model-batchsize (max-batchsize*n, where n is a positive integer, works too)
+        Only used in MultiStream Mode. Sets number of samples that are sent each query. Set to model-batchsize (max-batchsize*n, where n is a positive integer, works too).
     * :code:`--accuracy` 
-        use LoadGen AccuracyOnly mode instead of PerformanceOnly mode
+        Use LoadGen AccuracyOnly mode instead of PerformanceOnly mode.
     * :code:`--count [number of images to use]` 
-        not MLPerf compliant for AccuracyOnly mode, use for P´erformance mode or for testing
+        Choose how many samples to use for Inference. Not MLPerf compliant for AccuracyOnly mode, use for Performance mode or for testing.
 
 * `further arguments`__
 
