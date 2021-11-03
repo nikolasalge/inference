@@ -6,7 +6,7 @@ Model and Dataset
 * Model:
     * MobilnetV1
     * The model has to be compiled for the specific accelerator (for more details see Prerequisisites below)
-    * Model format for Coral: .tflite (compiled for edgetpu)
+    * Model format for Coral: .tflite (compiled for Edge TPU)
     * Model format for NCS2: .xml and .bin
     * Get model from `here`__, e.g. `MobilenetV1 quantized`__
 * Dataset:
@@ -36,7 +36,7 @@ __ https://coral.ai/docs/edgetpu/models-intro/
 
 Prerequisites NCS 2
 -------------------
-* Openvino
+* Install OpenVINO
 * Prepare model with Model Optimizer
 
 Prepare MLPerf
@@ -53,20 +53,24 @@ How to run MLPerf
 -----------------
 Change to :code:`vision/classification_and_detection`, then run :code:`python/main.py` with the following arguments:
 
-* :code:`--profile [mobilenet_coral, mobilenet_ncs2]`
-    sets default settings
-* :code:`--model [path to model file]`
-* :code:`--dataset-path [path to dataset folder containing images and val_map]`
-* :code:`--accuracy` 
-    use loadgen accuracy mode instead of performance mode
-* :code:`--count [number of images to use]` 
-    not mlperf compliant for accuracy mode, use for performance mode or for testing
-* :code:`--scenario [SingleStream, MultiStream, Server, Offline]`
-    sets loadgen scenario, for more info see below (the coral and ncs2 profiles use multistream mode by default)
-* :code:`--samples-per-query [no. of samples]`
-    only used in MultiStream Mode, sets number of samples that are sent each query 
-* :code:`--max-batchsize [N]` 
-    Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the model optimizer when compiling the model)
+* General Arguments
+    * :code:`--model [path to model file]`
+    * :code:`--dataset-path [path to dataset folder containing images and val_map.txt]`
+    * :code:`--profile [mobilenet_coral, mobilenet_ncs2]`
+        sets default settings
+    * :code:`--max-batchsize [N]` 
+        set this parameter to the batch size of the model. Coral only supports a batch size of 1, the NCS2 up to 128 (refers to N in NHWC, you have to hand this parameter to the Model Optimizer when compiling the model)
+
+* LoadGen Arguments    
+    * :code:`--scenario [SingleStream, MultiStream, Server, Offline]`
+        sets loadgen scenario, for more info see below (the Coral and NCS2 profiles use MultitSream mode by default)
+    * :code:`--samples-per-query [no. of samples]`
+        only used in MultiStream Mode, sets number of samples that are sent each query, set to model-batchsize (max-batchsize*n, where n is a positive integer, works too)
+    * :code:`--accuracy` 
+        use LoadGen AccuracyOnly mode instead of PerformanceOnly mode
+    * :code:`--count [number of images to use]` 
+        not MLPerf compliant for AccuracyOnly mode, use for P´erformance mode or for testing
+
 * `further arguments`__
 
 **example:**
@@ -77,7 +81,10 @@ Change to :code:`vision/classification_and_detection`, then run :code:`python/ma
     --model ~/models/mobilenet_v1_1.0_224_quant_edgetpu.tflite \
     --dataset-path ~/dataset/ILSVRC2012_img_val \
     --profile mobilenet_coral \
-    --accuracy --count 100 --samples-per-query 4
+    --max-batchsize 1 \
+    --scenario MultiStream --samples-per-query 4 \
+    --accuracy --count 100 
+    
 
 __ https://github.com/nikolasalge/inference/tree/develop/nikolas/vision/classification_and_detection#usage
 
@@ -109,5 +116,5 @@ Changes made to ensure compatibility of Accelerators
 * **main.py**: run the benchmark with this file like the example shown above
 * **backend_openvino_ncs2.py**: new backend for NCS2 compatibility
 * **backend_tflite_coral.py**: new backend for Coral compatibility
-* **dataset.py**: added preprocessing methods for int8 (coral) and float16 (ncs2)
+* **dataset.py**: added preprocessing methods for int8 (Coral) and float16 (NCS2)
     
