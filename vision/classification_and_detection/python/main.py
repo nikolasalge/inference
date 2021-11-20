@@ -13,12 +13,10 @@ import array
 import json
 import logging
 import os
-import subprocess
 import sys
 import threading
 import time
 from queue import Queue
-import signal
 
 import mlperf_loadgen as lg
 import numpy as np
@@ -48,11 +46,24 @@ SUPPORTED_DATASETS = {
     "imagenet_mobilenet_fp16":
         (imagenet.Imagenet, dataset.pre_process_mobilenet_fp16, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
+    #ncs2: inception test
+    "imagenet_mobilenet_fp16_ov":
+        (imagenet.Imagenet, dataset.pre_process_mobilenet_fp16_ov, dataset.PostProcessArgMax(offset=-1),
+         {"image_size": [224, 224, 3]}),
     #NA:
     #coral: int8
-    "imagenet_mobilenet_quant":
-        (imagenet.Imagenet, dataset.pre_process_mobilenet_quant, dataset.PostProcessArgMax(offset=-1),
+    "imagenet_mobilenet_int8":
+        (imagenet.Imagenet, dataset.pre_process_mobilenet_int8, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
+    #coral: coco, yolov3tiny, int8
+#    "imagenet_yolov3tiny_int8":
+#        (imagenet.Imagenet, dataset.pre_process_yolov3tiny_int8, dataset.PostProcessArgMax(offset=-1),
+#         {"image_size": [416, 416, 3]}),
+    #test coco
+    "coco_yolov3_int8": 
+        (coco.Coco, dataset.pre_process_yolov3_int8, dataset.PostProcessArgMax(offset=-1),
+         {"image_size": [416, 416, 3]}),
+
     "imagenet_pytorch":
         (imagenet.Imagenet, dataset.pre_process_imagenet_pytorch, dataset.PostProcessArgMax(offset=0),
          {"image_size": [224, 224, 3]}),
@@ -116,36 +127,7 @@ SUPPORTED_PROFILES = {
         "backend": "onnxruntime",
         "model-name": "mobilenet",
     },
-            
-    #NA: coral    
-    "mobilenet_coral": {
-        "dataset": "imagenet_mobilenet_quant",
-        "model-name": "mobilenet",
-        "backend": "tflite_coral",
-        "max-batchsize": 2048,
-        "inputs": "input:0",
-        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
-        "scenario": "MultiStream",
-        #"accuracy": 1,
-        #override mlperf rules compliant settings
-        #"time": 10 ,
-        #"count": 1000 , 
-    },  
-    #NA: ncs2    
-    "mobilenet_ncs2": {
-        "dataset": "imagenet_mobilenet_fp16", 
-        "model-name": "mobilenet",
-        "backend": "openvino_ncs2",
-        #set this during model optimization to IR, well actually 
-        #samples_per_query, this is just max value
-        "max-batchsize": 128, 
-        "scenario": "MultiStream",
-        #"accuracy": 1,
-        #override mlperf rules compliant settings
-        #"time": 10 ,
-        #"count": 1000 , 
-    },  
-
+    
     # ssd-mobilenet
     "ssd-mobilenet-tf": {
         "inputs": "image_tensor:0",
@@ -202,6 +184,77 @@ SUPPORTED_PROFILES = {
         "data-format": "NHWC",
         "model-name": "ssd-resnet34",
     },
+            
+    #NA: ncs2    
+    "mobilenet_ncs2": {
+        "dataset": "imagenet_mobilenet_fp16", 
+        "model-name": "mobilenet",
+        "backend": "openvino_ncs2",
+        #set this during model optimization to IR, well actually 
+        #samples_per_query, this is just max value
+        "max-batchsize": 128, 
+        "scenario": "MultiStream",
+        #"accuracy": 1,
+        #override mlperf rules compliant settings
+        #"time": 10 ,
+        #"count": 1000 , 
+    },
+    "inception_ncs2": {
+        "dataset": "imagenet_mobilenet_fp16_ov", 
+        "model-name": "inceptionv1",
+        "backend": "openvino_ncs2",
+        #set this during model optimization to IR, well actually 
+        #samples_per_query, this is just max value
+        "max-batchsize": 128, 
+        "scenario": "MultiStream",
+        #"accuracy": 1,
+        #override mlperf rules compliant settings
+        #"time": 10 ,
+        #"count": 1000 , 
+    }, 
+
+    #NA: coral    
+    "mobilenet_coral": {
+        "dataset": "imagenet_mobilenet_int8",
+        "model-name": "mobilenet",
+        "backend": "tflite_coral",
+        "max-batchsize": 1,
+        "inputs": "input:0",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        #"scenario": "MultiStream",
+    },
+    "yolov3full_coral": {
+        "backend": "tflite_coral",
+        "model-name": "yolov3full",
+        "inputs": "input_1:0",
+        "outputs": "Identity:0,Identity_1:0,Identity_2:0",
+        "data-format": "NHWC",
+        #"dataset": "imagenet_yolov3tiny_int8", #name key in dataset dict above
+        "dataset": "coco_yolov3_int8",
+        "max-batchsize": 1,
+        #"scenario": "MultiStream",
+    },    
+    "yolov3tiny_coral": {
+        "backend": "tflite_coral",
+        "model-name": "yolov3tiny",
+        "inputs": "input_1:0",
+        "outputs": "Identity:0,Identity_1:0",
+        "data-format": "NHWC",
+        #"dataset": "imagenet_yolov3tiny_int8", #name key in dataset dict above
+        "dataset": "coco_yolov3_int8",
+        "max-batchsize": 1,
+        #"scenario": "MultiStream",
+    },    
+            
+    "mobilenet-tflite": {
+        "inputs": "input:0",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        "dataset": "imagenet_mobilenet",
+        "backend": "tflite",
+        "model-name": "mobilenet",
+    },
+            
+            
 }
 
 SCENARIO_MAP = {
@@ -210,6 +263,14 @@ SCENARIO_MAP = {
     "Server": lg.TestScenario.Server,
     "Offline": lg.TestScenario.Offline,
 }
+
+#NA: create mode map
+#MODE_MAP = {
+#    "SubmissionRun": lg.TestMode.SubmissionRun,
+#    "AccuracyOnly": lg.TestMode.AccuracyOnly,
+#    "PerformanceOnly": lg.TestMode.PerformanceOnly,
+#    "FindPeakPerformance": lg.TestMode.FindPeakPerformance,
+#}
 
 last_timeing = []
 
@@ -234,14 +295,21 @@ def get_args(args):
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
+    #NA: use one parameter for testmode
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
     
+    #NA: add submission run parameter
+    parser.add_argument("--submissionrun", action="store_true", help="Run accuracyonly and performanceonly modes ")
+    #parser.add_argument("--test-mode", default="PerformanceOnly", help="TestMode of LoadGen")
+    
     # NA: add data measurement option
-    parser.add_argument('--measure', dest='measure', action='store_true')
-    parser.add_argument('--no-measure', dest='measure', action='store_false')
-    parser.set_defaults(measure=False)
+#    parser.add_argument('--measure', dest='measure', action='store_true')
+#    parser.add_argument('--no-measure', dest='measure', action='store_false')
+#    parser.set_defaults(measure=False)
+    # NA: add argument to set preprocessing_dir
+    parser.add_argument("--cache-dir", help="path to preprocessed dataset")
         
     # file to use mlperf rules compliant parameters
     parser.add_argument("--mlperf_conf", default="../../mlperf.conf", help="mlperf rules config")
@@ -464,22 +532,9 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
         name, result["qps"], result["mean"], took, acc_str,
         len(result_list), buckets_str))
     
-# NA: new function
-def start_measurement(output_dir, count, profile):
-    script_path = ("/home/ubuntuu/Bachelorarbeit/2_local_code/"
-               "changed_from_power_measurements/"
-               "gather_and_save_single_channel_modified.py")
-    hw = profile.split("_")[1]
-    factor = {
-        "coral" : 0.0073,
-        "ncs2" : 0.03 #0.0195
-            }
-    seconds = int(max(1, count*factor[hw]))
-    samples = 100000 * seconds
-    return subprocess.Popen(['python', script_path, '-s', str(samples), '-o', output_dir])
-
 #def main():
 def main(args):
+    begin = time.time()
     global last_timeing
     args = get_args(args)
 
@@ -500,13 +555,21 @@ def main(args):
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
+    #NA: add image size and cache dir
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
+                        use_cache=args.cache,
+                        image_size=kwargs["image_size"],
                         image_format=image_format,
                         pre_process=pre_proc,
-                        use_cache=args.cache,
-                        count=count, **kwargs)
+                        count=count, 
+                        cache_dir=args.cache_dir)
+    #DEBUG
+#    print(ds.image_size)
+#    print(image_format)
+#    sys.exit()
+
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
     final_results = {
@@ -542,7 +605,7 @@ def main(args):
         img, _ = ds.get_samples([0])
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
-
+    
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {
         lg.TestScenario.SingleStream: RunnerBase,
@@ -574,11 +637,16 @@ def main(args):
     settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
     settings.scenario = scenario
+    
+    #NA: change modeselection SubmissionRun
     settings.mode = lg.TestMode.PerformanceOnly
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly
     if args.find_peak_performance:
         settings.mode = lg.TestMode.FindPeakPerformance
+    if args.submissionrun:
+        settings.mode = lg.TestMode.SubmissionRun
+    #settings.mode = MODE_MAP[args.test_mode]
 
     if args.time:
         # override the time we want to run
@@ -602,18 +670,26 @@ def main(args):
 
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
+    #NA: params: (totalsamplecount, samples_guraranteed to fit into ram - for performance, load sample meth, unload sample method)
 
-    # NA: start measurement
-    if args.measure:
-        p = start_measurement(output_dir, count, args.profile)
-        time.sleep(2)
-                
     # start benchmark
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
-    runner.start_run(result_dict, args.accuracy)
+    runner.start_run(result_dict, args.accuracy) #initialize vars
     
+    
+#    prof_opt = tf.profiler.experimental.ProfilerOptions(
+#            host_tracer_level=3, python_tracer_level=1, 
+#            device_tracer_level=1
+#            )
+#    out_dir = '/home/ubuntuu/Bachelorarbeit/7_testresults/1_coral_power_profiling/0_tensorboard/test_coral_verbose'
+#    
+#    with tf.profiler.experimental.Profile(
+#            out_dir, options=prof_opt): #profiling, was output_dir
+
+    #tf.profiler.experimental.start(out_dir, options=prof_opt)
     lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
+    #tf.profiler.experimental.stop()
 
     if not last_timeing:
         last_timeing = runner.result_timing
@@ -622,16 +698,7 @@ def main(args):
 
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
-    
-    #NA:
-    if args.measure:
-        os.kill(p.pid, signal.SIGINT)
-        time.sleep(2) # while file locked wait
-        p.terminate()
-        time.sleep(2)
-        # count flops of model and add it to results
-        #final_results[name] = flops
-    
+
     runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
@@ -643,7 +710,14 @@ def main(args):
         out_file = os.path.join(output_dir, "results.json")
         with open(out_file, "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
-
+    # NA: write time log #timing
+        timing_file = os.path.join(output_dir, "timing.txt")
+        with open(timing_file, 'w') as f:
+            f.truncate()
+            f.write("mlperf;start;" + str(begin) + "\n")
+            for item in model.timing:
+                f.write("%s\n" % item)
+            f.write("mlperf;end;" + str(time.time()) + "\n")
 
 if __name__ == "__main__":
     main(sys.argv[1:])

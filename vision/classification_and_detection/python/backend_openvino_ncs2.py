@@ -3,6 +3,7 @@ openvino backend for ncs2
 """
 
 from threading import Lock
+import time
 
 import backend
 from openvino.inference_engine import IECore
@@ -19,6 +20,9 @@ class BackendOpenVinoNCS2(backend.Backend):
         super(BackendOpenVinoNCS2, self).__init__()
         self.sess = None
         self.lock = Lock()
+        #NA:
+        self.infer_count = -5
+        self.timing = []
 
     def version(self):
         """Returns the version of the backend
@@ -87,9 +91,14 @@ class BackendOpenVinoNCS2(backend.Backend):
         :return: results of prediction
         :rtype: list with ouput ndarray and type
         """
+        self.infer_count += 1
         self.lock.acquire()
         # inputs: dict of input to np array
+        if self.infer_count > 0:
+            self.timing.append(str(self.infer_count) + ";start;" + str(time.time()))
         res = self.sess.infer(inputs=feed)
+        if self.infer_count > 0:
+            self.timing.append(str(self.infer_count) + ";end;" + str(time.time())) #timing
         res = [res[self.outputs]]
 #        print(type(res[0][0][0]))
 #               

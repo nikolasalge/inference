@@ -24,11 +24,13 @@ Prerequisites Coral
 
 Note: Frequency mode is chosen by installing the respective runtime, to change the mode simply install the other runtime (you can't have both installed at the same time).
 
+* Install `tflite_runtime`__ (used here, alternatively you can intall the whole Tensorflow package)
 * Instead of compiling models yourself, Coral-ready models can be downloaded from `coral.ai`__, e.g. `MobileNetV1 compiled for Edge TPU`__
 * To use Tensorflow models, they first have to be converted to 8-bit tflite models and then have to be compiled with the `Edge TPU Compiler`__
 * Details on the model conversion process: `Tensorflow models on the Edge TPU`__
 
 __ https://coral.ai/docs/accelerator/get-started
+__ https://www.tensorflow.org/lite/guide/python
 __ https://coral.ai/models/image-classification/
 __ https://github.com/google-coral/test_data/raw/master/mobilenet_v1_1.0_224_quant_edgetpu.tflite
 __ https://coral.ai/docs/edgetpu/compiler/

@@ -110,17 +110,37 @@ class PostProcessCommon:
 
 
 class PostProcessArgMax:
+    """NA: This class is used to postprocess the results for models, where all 
+    probabilities are in the output tensor.
+    """
     def __init__(self, offset=0):
         self.offset = offset
         self.good = 0
         self.total = 0
 
     def __call__(self, results, ids, expected=None, result_dict=None):
+        """NA: Return Post-Processed output Tensors and check if the prediction
+        is correct.         
+        
+        Takes the output Tensor, which is of shape [N,1001]. The argmax 
+        function then looks for the biggest probability and returns the index,
+        and creates a Tensor with shape [N,1] and format [N,I]. 
+        N is the batch size, I the index, where the probability is the highest.
+        I is of range [0,1000].    
+        
+        :param results: 
+        :type results: 
+        
+        :return: 
+        :rtype: 
+        """
         processed_results = []
         results = np.argmax(results[0], axis=1)
         n = results.shape[0]
         for idx in range(0, n):
             result = results[idx] + self.offset
+            #print("NA: OUTPUT with max prob: " + str(result)) #debug
+            #print("NA: EXPECTED categorie: " + str(expected[idx])) #debug
             processed_results.append([result])
             if result == expected[idx]:
                 self.good += 1
@@ -205,7 +225,7 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
 
 
 #NA: add quantized preprocessing for coral
-def pre_process_mobilenet_quant(img, dims=None, need_transpose=False):
+def pre_process_mobilenet_int8(img, dims=None, need_transpose=False):
     """Preprocesses Image for a quantized Mobilenet
     
     :param img: image that is loaded with cv2
@@ -233,6 +253,45 @@ def pre_process_mobilenet_quant(img, dims=None, need_transpose=False):
     if need_transpose:
         img = img.transpose([2, 0, 1])
     return img
+
+#NA add preproc for yolo quantized 416
+def pre_process_yolov3_int8(img, dims=None, need_transpose=False):
+    """
+    TODO: CHANGE FOR YOLO
+    Preprocesses Image for a quantized Mobilenet
+    
+    :param img: image that is loaded with cv2
+    :type img: Mat, return of cv.imread()
+    
+    :param dims: format you want the img to be converted to in HWC, 
+        defaults to None
+    :type dims: list, e.g. [224, 224, 3], optional
+    
+    :param need_transpose: specifies, if the image needs to be transposed,
+        defaults to False
+    :type need_transpose: bool, optional
+    
+    :return: processed image
+    :rtype: ndarray
+    """
+    img = maybe_resize(img, dims)
+    img = np.asarray(img, dtype=np.uint8)
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img
+    
+#    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+#
+#    output_height, output_width, _ = dims #[416, 416, 3]
+#    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
+#    img = center_crop(img, output_height, output_width)
+#    img = np.asarray(img, dtype='uint8')
+#
+#    # transpose if needed
+#    if need_transpose:
+#        img = img.transpose([2, 0, 1])
+#    return img
 
 #NA: add float16 preprocessing for ncs2
 def pre_process_mobilenet_fp16(img, dims=None, need_transpose=False):
@@ -264,7 +323,45 @@ def pre_process_mobilenet_fp16(img, dims=None, need_transpose=False):
     img /= 255.0
     img -= 0.5
     img *= 2
+
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img
+
+
+def pre_process_mobilenet_fp16_ov(img, dims=None, need_transpose=False):
+    """Preprocessing of Image for a FP16 Mobilenet
+    Works with Converted Models of OpenVINO.
     
+    :param img: image that is loaded with cv2
+    :type img: Mat, return of cv.imread()
+    
+    :param dims: format you want the img to be converted to in HWC, 
+        defaults to None
+    :type dims: list, e.g. [224, 224, 3], optional
+    
+    :param need_transpose: specifies, if the image needs to be transposed,
+        defaults to False
+    :type need_transpose: bool, optional
+    
+    :return: processed image
+    :rtype: ndarray
+    """
+    #img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    output_height, output_width, _ = dims
+#    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
+#    img = center_crop(img, output_height, output_width)
+    img = cv2.resize(img, (output_width, output_height), interpolation=cv2.INTER_LINEAR)
+    #return img as ndarray
+    img = np.asarray(img, dtype='float16')
+        
+    # convert form [0,255] to [-1,1]
+#    img /= 255.0
+#    img -= 0.5
+#    img *= 2
+
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])
